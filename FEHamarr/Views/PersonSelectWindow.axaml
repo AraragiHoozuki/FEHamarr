@@ -1,0 +1,48 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="450"
+        x:Class="FEHamarr.Views.PersonSelectWindow"
+        Title="PersonSelectWindow"
+        SizeToContent="Width">
+  <StackPanel Spacing="4">
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
+      <CheckBox IsChecked="{Binding IsVersionSelectorEnabled}" >
+        <CheckBox.Content>
+          <ComboBox VerticalAlignment="Center" Name="VersionSelector" SelectedItem="{Binding Version}"/>
+        </CheckBox.Content>
+      </CheckBox>
+      <CheckBox IsChecked="{Binding IsMoveTypeSelectorEnabled}" >
+        <ComboBox Name="MoveTypeSelector" Items="{Binding MoveTypeIcons}" SelectedIndex="{Binding MoveType}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <Image Source="{Binding}" Height="32"/>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </CheckBox>
+      <CheckBox IsChecked="{Binding IsWeaponTypeSelectorEnabled}">
+        <ComboBox Name="WeaponTypeSelector" Items="{Binding WeaponTypeIcons}" SelectedIndex="{Binding WeaponType}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <Image Source="{Binding}" Height="32"/>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </CheckBox>
+    </StackPanel>
+    <StackPanel  Orientation="Horizontal" HorizontalAlignment="Center">
+      <Button Content="Search" Command="{Binding SearchCommand}"/>
+      <Button Content="Confirm" Command="{Binding ConfirmCommand}"/>
+    </StackPanel>
+
+    <ListBox Height="600" Items="{Binding FilteredPersons}" SelectedItem="{Binding SelectedPerson}" Margin="0 20" >
+      <ListBox.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel/>
+        </ItemsPanelTemplate>
+      </ListBox.ItemsPanel>
+    </ListBox>
+  </StackPanel>
+</Window>

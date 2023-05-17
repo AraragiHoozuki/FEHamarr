@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="500"
+        x:Class="FEHamarr.Views.SkillSelectWindow"
+        Title="SkillSelectWindow"
+        SizeToContent="Width">
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+      <CheckBox IsChecked="{Binding WeaponFilterEnabled}" >
+        <CheckBox.Content>
+          <ComboBox Name="WeaponTypeSelector" Items="{Binding WeaponTypeIcons}" SelectedIndex="{Binding WeaponType}">>
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <Image Source="{Binding}" Height="20"/>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </CheckBox.Content>
+      </CheckBox>
+      <CheckBox Content="Refined" IsChecked="{Binding Refined}"/>
+      <CheckBox Content="Exclusive" IsChecked="{Binding Exclusive}"/>
+      
+    </StackPanel>
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+      <CheckBox Content="SP240+" IsChecked="{Binding SP240Plus}" />
+      <CheckBox Content="SP300+" IsChecked="{Binding SP300Plus}"/>
+      <CheckBox Content="SP500+" IsChecked="{Binding SP500Plus}"/>
+      
+    </StackPanel>
+    <StackPanel  DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+      <Button Content="Search" Command="{Binding SearchCommand}"/>
+      <Button Content="Confirm" Command="{Binding ConfirmCommand}"/>
+    </StackPanel>
+    <ListBox Items="{Binding FilteredSkills}" SelectedItem="{Binding SelectedSkill}" Margin="0 20" >
+      <ListBox.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel/>
+        </ItemsPanelTemplate>
+      </ListBox.ItemsPanel>
+    </ListBox>
+  </DockPanel>
+</Window>

@@ -1,0 +1,237 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:FEHamarr.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="FEHamarr.Views.MainWindow"
+        Icon="/Assets/avalonia-logo.ico"
+        SizeToContent="Width"
+        Name ="MapWindow"
+        Title="FEHamarr">
+
+    <Design.DataContext>
+        <!-- This only sets the DataContext for the previewer in an IDE,
+             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+  <StackPanel>
+    <DockPanel>
+      <Menu DockPanel.Dock="Top">
+        <MenuItem Header="Open Map" Command="{Binding OpenMapCommand}"/>
+        <MenuItem Header="Save Map" Command="{Binding SaveMapCommand}"/>
+        <MenuItem Header="About"/>
+      </Menu>
+    </DockPanel>
+    <Grid ShowGridLines="True">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"></ColumnDefinition>
+        <ColumnDefinition Width="Auto"></ColumnDefinition>
+      </Grid.ColumnDefinitions>
+      <ItemsControl Name="MapGrids" Grid.Column="0" Items="{Binding Grids}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Vertical"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <ItemsControl Items="{Binding}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <ToggleButton Height="50" Width="50" Padding="1,1,1,1" IsChecked="{Binding IsSelected}" Command="{Binding #MapGrids.DataContext.GridSelectCommand}" CommandParameter="{Binding}">
+                    <ToggleButton.Content>
+                      <Grid RowDefinitions="*,*">
+                        <TextBlock Text ="{Binding FirstUnit.Name}" FontSize="9" Foreground="{Binding FirstUnit.NameColor}" Grid.Row="0" Width="25" Height="25" TextWrapping="Wrap"/>
+                        <Panel Background="{Binding TerrainColor}" Grid.Row="1"/>
+                      </Grid>
+                    </ToggleButton.Content>
+                  </ToggleButton>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Visible" Height="{Binding #MapWindow.Height}" VerticalAlignment="Top">
+      <StackPanel >
+        <Expander  Header="Grid Info">
+          <StackPanel Spacing="4">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <TextBlock Text="Terrain Type: " VerticalAlignment="Center"/>
+              <ComboBox Name="TerrainTypeSelector" SelectedIndex="{Binding CurrentGrid.Terrain}" VerticalAlignment="Center"/>
+              <Button Content="Add Unit" Command="{Binding AddUnitCommand}" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </Expander>
+        <ItemsControl Items="{Binding CurrentGrid.Units}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Expander>
+                  <Expander.Header>
+                    <StackPanel Orientation="Horizontal">
+                      <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" FontSize="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding Title}" HorizontalAlignment="Center"/>
+                      </StackPanel>
+                      <StackPanel  Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <Image Source="{Binding WeaponIcon}" Height="48" />
+                        <Image Source="{Binding MoveIcon}" Height="48" />
+                        <Image Source="{Binding AImage}" Height="48" />
+                        <Image Source="{Binding BImage}" Height="48" />
+                        <Image Source="{Binding CImage}" Height="48" />
+                        <Image Source="{Binding SImage}" Height="48" />
+                      </StackPanel>
+                    </StackPanel>
+                  </Expander.Header>
+                  <StackPanel Spacing="8">
+                    <Border BorderBrush="Black" BorderThickness="2" CornerRadius="3" Padding="4" BoxShadow="2 2 8 2 Gray">
+                      <StackPanel Orientation="Horizontal">
+                        <Button Command="{Binding #MapGrids.DataContext.ChangePersonCommand}" CommandParameter="{Binding}">Change</Button>
+                        <Button Command="{Binding #MapGrids.DataContext.DeleteUnitCommand}" CommandParameter="{Binding}">Delete</Button>
+                        <TextBlock Text="{Binding ID}" FontSize="24" VerticalAlignment="Center"/>
+                      </StackPanel>
+                    </Border>
+                    <Border
+                        BorderBrush="Black"
+                        BorderThickness="2"
+                        CornerRadius="3"
+                        Padding="4"
+                        BoxShadow="2 2 8 2 Gray">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*"></ColumnDefinition>
+                          <ColumnDefinition Width="*"></ColumnDefinition>
+                          <ColumnDefinition Width="*"></ColumnDefinition>
+                          <ColumnDefinition Width="*"></ColumnDefinition>
+                          <ColumnDefinition Width="*"></ColumnDefinition>
+                          <ColumnDefinition Width="*"></ColumnDefinition>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" >
+                          <TextBlock Text="{Binding #HPSlider.Value}" HorizontalAlignment="Center"/>
+                          <Slider Name="HPSlider" HorizontalAlignment="Center" Value="{Binding HP, Mode=TwoWay}" Orientation="Vertical" TickFrequency="1" Minimum="0" Maximum="99" IsSnapToTickEnabled="True" MinHeight="150"/>
+                          <TextBlock Text="HP" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" >
+                          <TextBlock Text="{Binding #ATKSlider.Value}" HorizontalAlignment="Center"/>
+                          <Slider Name="ATKSlider" HorizontalAlignment="Center" Value="{Binding ATK, Mode=TwoWay}" Orientation="Vertical" TickFrequency="1" Minimum="0" Maximum="99" IsSnapToTickEnabled="True" MinHeight="150"/>
+                          <TextBlock Text="ATK" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" >
+                          <TextBlock Text="{Binding #SPDSlider.Value}" HorizontalAlignment="Center"/>
+                          <Slider Name="SPDSlider" HorizontalAlignment="Center" Value="{Binding SPD, Mode=TwoWay}" Orientation="Vertical" TickFrequency="1" Minimum="0" Maximum="99" IsSnapToTickEnabled="True" MinHeight="150"/>
+                          <TextBlock Text="SPD" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" >
+                          <TextBlock Text="{Binding #DEFSlider.Value}" HorizontalAlignment="Center"/>
+                          <Slider Name="DEFSlider" HorizontalAlignment="Center" Value="{Binding DEF, Mode=TwoWay}" Orientation="Vertical" TickFrequency="1" Minimum="0" Maximum="99" IsSnapToTickEnabled="True" MinHeight="150"/>
+                          <TextBlock Text="DEF" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="4" >
+                          <TextBlock Text="{Binding #RESSlider.Value}" HorizontalAlignment="Center"/>
+                          <Slider Name="RESSlider" HorizontalAlignment="Center" Value="{Binding RES, Mode=TwoWay}" Orientation="Vertical" TickFrequency="1" Minimum="0" Maximum="99" IsSnapToTickEnabled="True" MinHeight="150"/>
+                          <TextBlock Text="RES" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="5">
+                          <CheckBox Content="IsEnemy" IsChecked="{Binding IsEnemy}"/>
+                          <CheckBox Content="IsReturning" IsChecked="{Binding IsReturning}"/>
+                          <StackPanel Spacing="4" Orientation="Horizontal">
+                            <TextBlock Text="CD" Width="100" VerticalAlignment="Center"/>
+                            <NumericUpDown Value="{Binding CD}" Maximum="255" Minimum="0" Increment="1" Height="18" VerticalAlignment="Center"/>
+                          </StackPanel>
+                          <StackPanel Spacing="4" Orientation="Horizontal">
+                            <TextBlock Text="StartTurn" Width="100" VerticalAlignment="Center"/>
+                            <NumericUpDown Value="{Binding StartTurn}" Maximum="255" Minimum="0" Increment="1" Height="18" VerticalAlignment="Center"/>
+                          </StackPanel>
+                          <StackPanel Spacing="4" Orientation="Horizontal">
+                            <TextBlock Text="MoveGroup" Width="100" VerticalAlignment="Center"/>
+                            <NumericUpDown Value="{Binding MoveGroup}" Maximum="255" Minimum="0" Increment="1" Height="18" VerticalAlignment="Center"/>
+                          </StackPanel>
+                          <StackPanel Spacing="4" Orientation="Horizontal">
+                            <TextBlock Text="MoveDelay" Width="100" VerticalAlignment="Center"/>
+                            <NumericUpDown Value="{Binding MoveDelay}" Maximum="255" Minimum="0" Increment="1" Height="18" VerticalAlignment="Center"/>
+                          </StackPanel>
+
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                    <Border BorderBrush="Black" BorderThickness="2" CornerRadius="3" Padding="4" BoxShadow="2 2 8 2 Gray">
+                      <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                          <Button VerticalAlignment="Center" Command="{Binding #MapGrids.DataContext.ChangeSkillCommand}" CommandParameter="{Binding UnitAndWeapon}">Change</Button>
+                          <Button VerticalAlignment="Center">Delete</Button>
+                          <Image Source="{Binding WeaponImage}" Height="28" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding Weapon.Name}" FontSize="24" VerticalAlignment="Center" ToolTip.Tip="{Binding Weapon.Description}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                          <Button VerticalAlignment="Center" Command="{Binding #MapGrids.DataContext.ChangeSkillCommand}" CommandParameter="{Binding UnitAndAssist}">Change</Button>
+                          <Button VerticalAlignment="Center">Delete</Button>
+                          <Image Source="{Binding AssistImage}" Height="28" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding Assist.Name}" FontSize="24" VerticalAlignment="Center" ToolTip.Tip="{Binding Assist.Description}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                          <Button VerticalAlignment="Center" Command="{Binding #MapGrids.DataContext.ChangeSkillCommand}" CommandParameter="{Binding UnitAndSpecial}">Change</Button>
+                          <Button VerticalAlignment="Center">Delete</Button>
+                          <Image Source="{Binding SpecialImage}" Height="28" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding Special.Name}" FontSize="24" VerticalAlignment="Center" ToolTip.Tip="{Binding Special.Description}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                          <Button VerticalAlignment="Center" Command="{Binding #MapGrids.DataContext.ChangeSkillCommand}" CommandParameter="{Binding UnitAndA}">Change</Button>
+                          <Button VerticalAlignment="Center">Delete</Button>
+                          <Image Source="{Binding AImage}" Height="28" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding A.Name}" FontSize="24" VerticalAlignment="Center" ToolTip.Tip="{Binding A.Description}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                          <Button VerticalAlignment="Center" Command="{Binding #MapGrids.DataContext.ChangeSkillCommand}" CommandParameter="{Binding UnitAndB}">Change</Button>
+                          <Button VerticalAlignment="Center">Delete</Button>
+                          <Image Source="{Binding BImage}" Height="28" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding B.Name}" FontSize="24" VerticalAlignment="Center" ToolTip.Tip="{Binding B.Description}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                          <Button VerticalAlignment="Center" Command="{Binding #MapGrids.DataContext.ChangeSkillCommand}" CommandParameter="{Binding UnitAndC}">Change</Button>
+                          <Button VerticalAlignment="Center">Delete</Button>
+                          <Image Source="{Binding CImage}" Height="28" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding C.Name}" FontSize="24" VerticalAlignment="Center" ToolTip.Tip="{Binding C.Description}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                          <Button VerticalAlignment="Center" Command="{Binding #MapGrids.DataContext.ChangeSkillCommand}" CommandParameter="{Binding UnitAndS}">Change</Button>
+                          <Button VerticalAlignment="Center">Delete</Button>
+                          <Image Source="{Binding SImage}" Height="28" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding S.Name}" FontSize="24" VerticalAlignment="Center" ToolTip.Tip="{Binding S.Description}"/>
+                        </StackPanel>
+                      </StackPanel>
+                    </Border>
+                    <Border BorderBrush="Black" BorderThickness="2" CornerRadius="3" Padding="4" BoxShadow="2 2 8 2 Gray">
+                      <DockPanel>
+                        <StackPanel>
+                          <TextBlock Text="SpawnCheck"/>
+                        </StackPanel>
+                      </DockPanel>
+                    </Border>
+                  </StackPanel>
+                </Expander>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        
+
+
+      </StackPanel>
+      </ScrollViewer>
+
+    </Grid>
+    
+  </StackPanel>
+    
+
+</Window>

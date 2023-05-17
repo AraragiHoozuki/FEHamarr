@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="FEHamarr.Views.SkillView">
+  <Border BorderBrush="Black" BorderThickness="2" CornerRadius="3" Padding="4">
+    <DockPanel>
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center">
+        <Image Source="{Binding Icon}" Height="32" VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding Name}" FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
+      </StackPanel>
+      <TextBlock DockPanel.Dock="Bottom" Text="{Binding Description}" HorizontalAlignment="Center"/>
+    </DockPanel>
+  </Border>
+
+</UserControl>
