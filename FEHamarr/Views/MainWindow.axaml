@@ -99,7 +99,7 @@
                       <StackPanel Orientation="Horizontal">
                         <Button Command="{Binding #MapGrids.DataContext.ChangePersonCommand}" CommandParameter="{Binding}">Change</Button>
                         <Button Command="{Binding #MapGrids.DataContext.DeleteUnitCommand}" CommandParameter="{Binding}">Delete</Button>
-                        <TextBlock Text="{Binding ID}" FontSize="24" VerticalAlignment="Center"/>
+                        <TextBox Text="{Binding ID}" VerticalAlignment="Center" FontFamily="Yu Gothic"/>
                       </StackPanel>
                     </Border>
                     <Border
@@ -214,7 +214,23 @@
                     <Border BorderBrush="Black" BorderThickness="2" CornerRadius="3" Padding="4" BoxShadow="2 2 8 2 Gray">
                       <DockPanel>
                         <StackPanel>
-                          <TextBlock Text="SpawnCheck"/>
+                          <TextBox  Watermark="Check Unit ID" Text="{Binding SpawnCheck}" FontFamily="Yu Gothic"/>
+                          <StackPanel Spacing="4" Orientation="Horizontal">
+                            <TextBlock Text="SpawnCount" Width="200" VerticalAlignment="Center"/>
+                            <NumericUpDown Value="{Binding SpawnCount}" Maximum="255" Minimum="0" Increment="1" Height="18" VerticalAlignment="Center"/>
+                          </StackPanel>
+                          <StackPanel Spacing="4" Orientation="Horizontal">
+                            <TextBlock Text="SpawnTurns" Width="200" VerticalAlignment="Center"/>
+                            <NumericUpDown Value="{Binding SpawnTurns}" Maximum="255" Minimum="0" Increment="1" Height="18" VerticalAlignment="Center"/>
+                          </StackPanel>
+                          <StackPanel Spacing="4" Orientation="Horizontal">
+                            <TextBlock Text="SpawnTargetRemain" Width="200" VerticalAlignment="Center"/>
+                            <NumericUpDown Value="{Binding SpawnTargetRemain}" Maximum="255" Minimum="0" Increment="1" Height="18" VerticalAlignment="Center"/>
+                          </StackPanel>
+                          <StackPanel Spacing="4" Orientation="Horizontal">
+                            <TextBlock Text="SpawnTargetKill" Width="200" VerticalAlignment="Center"/>
+                            <NumericUpDown Value="{Binding SpawnTargetKill}" Maximum="255" Minimum="0" Increment="1" Height="18" VerticalAlignment="Center"/>
+                          </StackPanel>
                         </StackPanel>
                       </DockPanel>
                     </Border>

@@ -36,9 +36,11 @@ namespace FEHamarr.ViewModels
                 return (_skillIndex == 6 && (int)s.category >=3 && (int)s.category <=6)||(_skillIndex !=6 && ((int)s.category==_skillIndex) && s.refine_sort_id < 100);
             }).OrderBy(s => s.sort_value).Reverse();
             if (_skillIndex == 0) WeaponFilterEnabled = true;
+            if (_skillIndex == 6) SkillTypeFilterEnabled = true;
             DoSearch();
 
             WeaponTypeIcons = DataManager.WeaponTypeIcons.Values.ToArray();
+            SkillTypeItems = Enum.GetNames<SkillCategory>();
         }
 
         void DoSearch()
@@ -52,7 +54,8 @@ namespace FEHamarr.ViewModels
                     (_skillIndex==6 || (int)s.category == _skillIndex) &&
                     (Exclusive == false || s.is_exclusive == 1 ) &&
                     (_skillIndex != 0 || Refined == (s.is_refined == 1)) &&
-                    (WeaponFilterEnabled==false||_skillIndex!=0 || (s.wep_equip & (1 << WeaponType)) == (1 << WeaponType) )
+                    (WeaponFilterEnabled==false||_skillIndex!=0 || (s.wep_equip & (1 << WeaponType)) == (1 << WeaponType) ) &&
+                    (SkillTypeFilterEnabled == false || SkillType == (int)s.category)
                     )
                 {
                     FilteredSkills.Add(new SkillViewModel(s));
@@ -84,6 +87,11 @@ namespace FEHamarr.ViewModels
         public bool WeaponFilterEnabled { get; set; }
         public int WeaponType { get; set; } = 0;
         public IImage[] WeaponTypeIcons { get; set; }
+
+        public bool SkillTypeFilterEnabled { get; set; } = false;
+        public string[] SkillTypeItems { get; set; }
+
+        public int SkillType { get; set; } = 3;
     }
 
     public class SkillViewModel : ViewModelBase

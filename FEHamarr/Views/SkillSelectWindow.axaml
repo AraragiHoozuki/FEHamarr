@@ -8,9 +8,9 @@
         SizeToContent="Width">
   <DockPanel>
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
-      <CheckBox IsChecked="{Binding WeaponFilterEnabled}" >
+      <CheckBox IsEnabled="{Binding WeaponFilterEnabled}" IsChecked="{Binding WeaponFilterEnabled}" >
         <CheckBox.Content>
-          <ComboBox Name="WeaponTypeSelector" Items="{Binding WeaponTypeIcons}" SelectedIndex="{Binding WeaponType}">>
+          <ComboBox Name="WeaponTypeSelector" Items="{Binding WeaponTypeIcons}" SelectedIndex="{Binding WeaponType}">
             <ComboBox.ItemTemplate>
               <DataTemplate>
                 <Image Source="{Binding}" Height="20"/>
@@ -29,10 +29,20 @@
       <CheckBox Content="SP500+" IsChecked="{Binding SP500Plus}"/>
       
     </StackPanel>
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+      <CheckBox IsEnabled="{Binding SkillTypeFilterEnabled}" IsChecked="{Binding SkillTypeFilterEnabled}" >
+        <CheckBox.Content>
+          <ComboBox Name="SkillTypeSelector" Items="{Binding SkillTypeItems}" SelectedIndex="{Binding SkillType}"/>
+        </CheckBox.Content>
+      </CheckBox>
+
+    </StackPanel>
+
     <StackPanel  DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
       <Button Content="Search" Command="{Binding SearchCommand}"/>
       <Button Content="Confirm" Command="{Binding ConfirmCommand}"/>
     </StackPanel>
+
     <ListBox Items="{Binding FilteredSkills}" SelectedItem="{Binding SelectedSkill}" Margin="0 20" >
       <ListBox.ItemsPanel>
         <ItemsPanelTemplate>
