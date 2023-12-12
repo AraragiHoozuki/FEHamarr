@@ -34,6 +34,8 @@ namespace FEHamarr.ViewModels
             SaveMapCommand = ReactiveCommand.Create(SaveMap);
             GridSelectCommand = ReactiveCommand.Create<MapGrid>(SelectGrid);
             AddUnitCommand = ReactiveCommand.Create(AddUnit);
+            CopyUnitCommand = ReactiveCommand.Create<MapUnit>(CopyUnit);
+            PasteUnitCommand = ReactiveCommand.Create<MapUnit>(PasteUnit);
             DeleteUnitCommand = ReactiveCommand.Create<MapUnit>(DeleteUnit);
             ChangePersonCommand = ReactiveCommand.CreateFromTask<MapUnit>(OpenPersonSelectWindow);
             ChangeSkillCommand = ReactiveCommand.CreateFromTask<MapUnitAndSkillIndex>(OpenSkillSelectWindow);
@@ -47,6 +49,8 @@ namespace FEHamarr.ViewModels
         public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> AddUnitCommand { get; }
         public ReactiveCommand<MapUnit, System.Reactive.Unit> DeleteUnitCommand { get; }
         public ReactiveCommand<MapUnit, System.Reactive.Unit> ChangePersonCommand { get; }
+        public ReactiveCommand<MapUnit, System.Reactive.Unit> CopyUnitCommand { get; }
+        public ReactiveCommand<MapUnit, System.Reactive.Unit> PasteUnitCommand { get; }
         public ReactiveCommand<MapUnitAndSkillIndex, System.Reactive.Unit> ChangeSkillCommand { get; }
         public ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit> SaveMapCommand { get; }
         public Interaction<PersonSelectWindowViewModel, PersonViewModel?> ShowPersonSelector { get; }
@@ -116,6 +120,28 @@ namespace FEHamarr.ViewModels
             _map.units.list.Add(unit);
         }
 
+        SerializedData.Unit? copiedUnit = null;
+        void CopyUnit(MapUnit unit)
+        {
+            copiedUnit = unit.Unit.Clone();
+        }
+
+        void PasteUnit(MapUnit unit)
+        {
+            if (copiedUnit != null) { 
+                unit.ID = copiedUnit.id_tag;
+                for (int i = 0; i < 7; i++)
+                {
+                    unit.ChangeSkill(i, copiedUnit.skills[i]);
+                }
+                unit.HP = copiedUnit.stats.hp;
+                unit.ATK = copiedUnit.stats.atk;
+                unit.SPD = copiedUnit.stats.spd;
+                unit.DEF = copiedUnit.stats.def;
+                unit.RES = copiedUnit.stats.res;
+            }
+        }
+
         void DeleteUnit(MapUnit u)
         {
             CurrentGrid.DeleteUnit(u);
@@ -130,14 +156,17 @@ namespace FEHamarr.ViewModels
                 Person p = result.Person;
                 unit.ID = p.id;
                 unit.ChangeSkill(0, result.w);
+                unit.ChangeSkill(1, result.h);
                 unit.ChangeSkill(3, result.a);
                 unit.ChangeSkill(4, result.b);
                 unit.ChangeSkill(5, result.c);
-                unit.HP = (ushort)(p.Stat(0) + 10);
-                unit.ATK = (ushort)(p.Stat(1) + 4);
-                unit.SPD = (ushort)(p.Stat(2) + 4);
-                unit.DEF = (ushort)(p.Stat(3) + 4);
-                unit.RES = (ushort)(p.Stat(4) + 4);
+                unit.ChangeSkill(6, result.x);
+                int[] stats = p.CalcStats(40, 10, -1, -1);
+                unit.HP = (ushort)stats[0];
+                unit.ATK = (ushort)stats[1];
+                unit.SPD = (ushort)stats[2];
+                unit.DEF = (ushort)stats[3];
+                unit.RES = (ushort)stats[4];
             }
         }
         async Task OpenSkillSelectWindow(MapUnitAndSkillIndex unit_and)
@@ -305,6 +334,7 @@ namespace FEHamarr.ViewModels
             NotifyPropertyChanged(nameof(A));
             NotifyPropertyChanged(nameof(B));
             NotifyPropertyChanged(nameof(C));
+            NotifyPropertyChanged(nameof(X));
             NotifyPropertyChanged(nameof(S));
             NotifyPropertyChanged(nameof(WeaponImage));
             NotifyPropertyChanged(nameof(AssistImage));
@@ -312,6 +342,7 @@ namespace FEHamarr.ViewModels
             NotifyPropertyChanged(nameof(AImage));
             NotifyPropertyChanged(nameof(BImage));
             NotifyPropertyChanged(nameof(CImage));
+            NotifyPropertyChanged(nameof(XImage));
             NotifyPropertyChanged(nameof(SImage));
         }
 
@@ -413,12 +444,20 @@ namespace FEHamarr.ViewModels
                 this.RaiseAndSetIfChanged(ref unit.skills[5], value.id);
             }
         }
-        public Skill S
+        public Skill X
         {
             get => DataManager.GetSkill(unit.skills[6]);
             set
             {
                 this.RaiseAndSetIfChanged(ref unit.skills[6], value.id);
+            }
+        }
+        public Skill S
+        {
+            get => DataManager.GetSkill(unit.skills[7]);
+            set
+            {
+                this.RaiseAndSetIfChanged(ref unit.skills[7], value.id);
             }
         }
 
@@ -428,7 +467,8 @@ namespace FEHamarr.ViewModels
         public IImage AImage => GetSkillImage(3);
         public IImage BImage => GetSkillImage(4);
         public IImage CImage => GetSkillImage(5);
-        public IImage SImage => GetSkillImage(6);
+        public IImage XImage => GetSkillImage(6);
+        public IImage SImage => GetSkillImage(7);
 
         private IImage GetSkillImage(int index)
         {
@@ -525,6 +565,35 @@ namespace FEHamarr.ViewModels
             }
         }
 
+        bool sbond = false;
+        public bool IsSBond
+        {
+            get => sbond;
+            set
+            {
+                if (sbond != value)
+                {
+                    if (value == true)
+                    {
+                        HP += 5;
+                        ATK += 2;
+                        SPD += 2;
+                        DEF += 2;
+                        RES += 2;
+                    } else
+                    {
+                        HP-= 5;
+                        ATK -= 2;
+                        SPD -= 2;
+                        DEF -= 2;
+                        RES -= 2;
+                    }
+                    sbond = value;
+                }
+                
+            }
+        }
+
         public string SpawnCheck
         {
             get => unit.spawn_check;
@@ -557,7 +626,8 @@ namespace FEHamarr.ViewModels
         public MapUnitAndSkillIndex UnitAndA => new MapUnitAndSkillIndex(this, 3);
         public MapUnitAndSkillIndex UnitAndB => new MapUnitAndSkillIndex(this, 4);
         public MapUnitAndSkillIndex UnitAndC => new MapUnitAndSkillIndex(this, 5);
-        public MapUnitAndSkillIndex UnitAndS => new MapUnitAndSkillIndex(this, 6);
+        public MapUnitAndSkillIndex UnitAndX => new MapUnitAndSkillIndex(this, 6);
+        public MapUnitAndSkillIndex UnitAndS => new MapUnitAndSkillIndex(this, 7);
     }
 
     public class MapUnitAndSkillIndex

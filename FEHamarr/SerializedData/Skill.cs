@@ -15,6 +15,7 @@ namespace FEHamarr.SerializedData
         A,
         B,
         C,
+        X,
         S,
         Refine,
         Transform

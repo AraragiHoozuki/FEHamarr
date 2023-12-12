@@ -1,4 +1,5 @@
-﻿using FEHamarr.FEHArchive;
+﻿using Avalonia.Controls.Shapes;
+using FEHamarr.FEHArchive;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -91,13 +92,73 @@ namespace FEHamarr.SerializedData
         public Stats grow;
         public string[][] skills;
 
-        public int Stat(int index, int hone = 0)
+        public int Stat(int index, int hone = 0, int level = 40)
         {
             int value = grow[index] + 5 * hone;
             value = value * 114 / 100;
-            value = value * 39 / 100;
+            value = value * (level - 1) / 100;
             value = value + stats[index] + 1 + hone;
             return value;
+        }
+
+        public int[] CalcStats(int level, int merge, int honeIndex, int flawIndex)
+        {
+            int[] temp = new int[] { stats.hp, stats.atk, stats.spd, stats.def, stats.res };
+            if (honeIndex > 0) temp[honeIndex] += 1;
+            if (flawIndex > 0) temp[flawIndex] -= 1;
+            var order = temp.Select((n, i) => new { Value = n, Index = i }).OrderByDescending(x => x.Value);
+            int[] res = new int[5];
+
+            for (int mt = 0; mt < merge; mt++)
+            {
+                switch (mt) {
+                    case 0:
+                        res[order.Skip(0).First().Index] += 1;
+                        res[order.Skip(1).First().Index] += 1;
+                        if (flawIndex < 0)
+                        {
+                            res[order.Skip(0).First().Index] += 1;
+                            res[order.Skip(1).First().Index] += 1;
+                            res[order.Skip(2).First().Index] += 1;
+                        }
+                        break;
+                    case 1:
+                    case 6:
+                        res[order.Skip(2).First().Index] += 1;
+                        res[order.Skip(3).First().Index] += 1;
+                        break;
+                    case 2:
+                    case 7:
+                        res[order.Skip(0).First().Index] += 1;
+                        res[order.Skip(4).First().Index] += 1;
+                        break;
+                    case 3:
+                    case 8:
+                        res[order.Skip(1).First().Index] += 1;
+                        res[order.Skip(2).First().Index] += 1;
+                        break;
+                    case 4:
+                    case 9:
+                        res[order.Skip(3).First().Index] += 1;
+                        res[order.Skip(4).First().Index] += 1;
+                        break;
+                    case 5:
+                        res[order.Skip(0).First().Index] += 1;
+                        res[order.Skip(1).First().Index] += 1;
+                        break;
+                    default:
+                        break;
+
+                }
+                
+            }
+
+            if (merge > 0) flawIndex = -1;
+            for(int i = 0; i < 5; i++)
+            {
+                res[i] += Stat(i, honeIndex == i ? 1 : (flawIndex == i ? -1 : 0), level);
+            }
+            return res;
         }
     }
 
@@ -155,8 +216,8 @@ namespace FEHamarr.SerializedData
                 };
                 for (int j = 0; j < 5; j++)
                 {
-                    item.skills[j] = new string[14];
-                    for (int k = 0; k < 14; k++)
+                    item.skills[j] = new string[15];
+                    for (int k = 0; k < 15; k++)
                     {
                         item.skills[j][k] = reader.ReadCryptedString(FEHArc.XKeyId);
                     }

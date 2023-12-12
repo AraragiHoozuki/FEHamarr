@@ -33,10 +33,10 @@ namespace FEHamarr.ViewModels
             });
             _skillIndex = unit_and.Index;
             _skillPool = DataManager.Skills.Select(kv => kv.Value).Where(s=> {
-                return (_skillIndex == 6 && (int)s.category >=3 && (int)s.category <=6)||(_skillIndex !=6 && ((int)s.category==_skillIndex) && s.refine_sort_id < 100);
+                return (_skillIndex == 7 && (int)s.category >=3 && (int)s.category <=7)||(_skillIndex !=7 && ((int)s.category==_skillIndex) && (s.id.Contains("SID_魔器")|| s.refine_sort_id < 100));
             }).OrderBy(s => s.sort_value).Reverse();
             if (_skillIndex == 0) WeaponFilterEnabled = true;
-            if (_skillIndex == 6) SkillTypeFilterEnabled = true;
+            if (_skillIndex == 7) SkillTypeFilterEnabled = true;
             DoSearch();
 
             WeaponTypeIcons = DataManager.WeaponTypeIcons.Values.ToArray();
@@ -51,7 +51,7 @@ namespace FEHamarr.ViewModels
                 if ((!SP240Plus || s.sp_cost >= 240) &&
                     (!SP300Plus || s.sp_cost >= 300) &&
                     (!SP500Plus || s.sp_cost >= 500) &&
-                    (_skillIndex==6 || (int)s.category == _skillIndex) &&
+                    (_skillIndex==7 || (int)s.category == _skillIndex) &&
                     (Exclusive == false || s.is_exclusive == 1 ) &&
                     (_skillIndex != 0 || Refined == (s.is_refined == 1)) &&
                     (WeaponFilterEnabled==false||_skillIndex!=0 || (s.wep_equip & (1 << WeaponType)) == (1 << WeaponType) ) &&

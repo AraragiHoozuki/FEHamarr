@@ -93,12 +93,16 @@ namespace FEHamarr.ViewModels
             if (!(person is Enemy)) {
                 List<string> list = _person.skills[3].Concat(_person.skills[4]).Reverse().ToList();
                 w = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.Weapon));
+                h = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.Assist));
+                if (h != null) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(h).icon));
                 a = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.A));
                 if (a != null) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(a).icon));
                 b = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.B));
                 if (b != null) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(b).icon));
                 c = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.C));
                 if (c != null) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(c).icon));
+                x = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.X));
+                if (x != null) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(x).icon));
             } else
             {
                 w = ((Enemy)person).top_weapon;
@@ -107,9 +111,11 @@ namespace FEHamarr.ViewModels
         }
         public Person Person => _person;
         public string? w;
+        public string? h;
         public string? a;
         public string? b;
         public string? c;
+        public string? x;
         public string Name => DataManager.GetMessage("M" + _person.id);
         public string Title
         {

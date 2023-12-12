@@ -161,6 +161,7 @@ namespace FEHamarr.SerializedData
                         x = reader.ReadX16(0xB332),
                         y = reader.ReadX16(0x28B2)
                     };
+                    reader.Skip(4);
                 }
             }
             return this;
@@ -193,12 +194,17 @@ namespace FEHamarr.SerializedData
         public byte spawn_target_kills;
         public byte[] paddings;
 
+        public Unit Clone()
+        {
+            return (Unit)this.MemberwiseClone();
+        }
+
         public static Unit Create(ushort x, ushort y)
         {
             return new Unit()
             {
                 id_tag = "PID_無し",
-                skills = new string[7],
+                skills = new string[8],
                 accessory = null,
                 pos = new Position() { x = x, y = y },
                 rarity = 5,
@@ -277,8 +283,9 @@ namespace FEHamarr.SerializedData
                     list.Add(new Unit()
                     {
                         id_tag = reader.ReadCryptedString(FEHArc.XKeyId),
-                        skills = new string[7]
+                        skills = new string[8]
                         {
+                            reader.ReadCryptedString(FEHArc.XKeyId),
                             reader.ReadCryptedString(FEHArc.XKeyId),
                             reader.ReadCryptedString(FEHArc.XKeyId),
                             reader.ReadCryptedString(FEHArc.XKeyId),

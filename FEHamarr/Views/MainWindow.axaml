@@ -60,7 +60,7 @@
       </ItemsControl>
       <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Visible" Height="{Binding #MapWindow.Height}" VerticalAlignment="Top">
       <StackPanel >
-        <Expander  Header="Grid Info">
+        <Border BorderBrush="Black" BorderThickness="2" CornerRadius="3" Padding="4" BoxShadow="2 2 8 2 Gray">
           <StackPanel Spacing="4">
             <StackPanel Orientation="Horizontal" Spacing="4">
               <TextBlock Text="Terrain Type: " VerticalAlignment="Center"/>
@@ -68,7 +68,7 @@
               <Button Content="Add Unit" Command="{Binding AddUnitCommand}" HorizontalAlignment="Center"/>
             </StackPanel>
           </StackPanel>
-        </Expander>
+        </Border>
         <ItemsControl Items="{Binding CurrentGrid.Units}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
@@ -90,6 +90,7 @@
                         <Image Source="{Binding AImage}" Height="48" />
                         <Image Source="{Binding BImage}" Height="48" />
                         <Image Source="{Binding CImage}" Height="48" />
+                        <Image Source="{Binding XImage}" Height="48" />
                         <Image Source="{Binding SImage}" Height="48" />
                       </StackPanel>
                     </StackPanel>
@@ -99,6 +100,8 @@
                       <StackPanel Orientation="Horizontal">
                         <Button Command="{Binding #MapGrids.DataContext.ChangePersonCommand}" CommandParameter="{Binding}">Change</Button>
                         <Button Command="{Binding #MapGrids.DataContext.DeleteUnitCommand}" CommandParameter="{Binding}">Delete</Button>
+                        <Button Command="{Binding #MapGrids.DataContext.CopyUnitCommand}" CommandParameter="{Binding}">Copy</Button>
+                        <Button Command="{Binding #MapGrids.DataContext.PasteUnitCommand}" CommandParameter="{Binding}">Paste</Button>
                         <TextBox Text="{Binding ID}" VerticalAlignment="Center" FontFamily="Yu Gothic"/>
                       </StackPanel>
                     </Border>
@@ -145,6 +148,7 @@
                         <StackPanel Grid.Column="5">
                           <CheckBox Content="IsEnemy" IsChecked="{Binding IsEnemy}"/>
                           <CheckBox Content="IsReturning" IsChecked="{Binding IsReturning}"/>
+                          <CheckBox Content="S Bond" IsChecked="{Binding IsSBond}"/>
                           <StackPanel Spacing="4" Orientation="Horizontal">
                             <TextBlock Text="CD" Width="100" VerticalAlignment="Center"/>
                             <NumericUpDown Value="{Binding CD}" Maximum="255" Minimum="0" Increment="1" Height="18" VerticalAlignment="Center"/>
@@ -202,6 +206,12 @@
                           <Button VerticalAlignment="Center">Delete</Button>
                           <Image Source="{Binding CImage}" Height="28" VerticalAlignment="Center"/>
                           <TextBlock Text="{Binding C.Name}" FontSize="24" VerticalAlignment="Center" ToolTip.Tip="{Binding C.Description}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                          <Button VerticalAlignment="Center" Command="{Binding #MapGrids.DataContext.ChangeSkillCommand}" CommandParameter="{Binding UnitAndX}">Change</Button>
+                          <Button VerticalAlignment="Center">Delete</Button>
+                          <Image Source="{Binding XImage}" Height="28" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding X.Name}" FontSize="24" VerticalAlignment="Center" ToolTip.Tip="{Binding X.Description}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                           <Button VerticalAlignment="Center" Command="{Binding #MapGrids.DataContext.ChangeSkillCommand}" CommandParameter="{Binding UnitAndS}">Change</Button>
