@@ -1,8 +1,11 @@
-﻿using FEHamarr.SerializedData;
+﻿using FEHamarr.HSDArc;
+using FEHamarr.SerializedData;
+using HarfBuzzSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -10,226 +13,225 @@ namespace FEHamarr.FEHArchive
 {
     public class FEHArcWriter : BinaryWriter
     {
-        public Dictionary<long, byte[]> pointers = new Dictionary<long, byte[]>();
+        struct FieldAndData {
+            public FieldInfo field;
+            public object data;
+            public int index;
+
+            public FieldAndData(FieldInfo f, object d, int i = 0)
+            {
+                field = f; data = d; index = i;
+            }
+        }
+        Dictionary<long, FieldAndData> pointers = new ();
+        List<long> ptr_offsets = new();
         long pointer_list_offset;
         public FEHArcWriter(Stream output) : base(output)
         {
         }
-        public void Write(byte value, byte key)
-        {
-            Write((byte)(value ^ key));
-        }
-        public void Write(ushort value, ushort key)
-        {
-            Write((ushort)(value ^ key));
-        }
-        public void Write(short value, ushort key)
-        {
-            Write((short)(value ^ key));
-        }
-        public void Write(uint value, uint key)
-        {
-            Write((uint)(value ^ key));
-        }
-        public void Write(ulong value, ulong key)
-        {
-            Write(value ^ key);
-        }
 
-        public void WriteStats(Stats st)
+        public void WriteSingleField(object data, FieldInfo field, HSDXAttribute at)
         {
-            Write(st.hp, 0xd632);
-            Write(st.atk, 0x14a0);
-            Write(st.spd, 0xa55e);
-            Write(st.def, 0x8566);
-            Write(st.res, 0xaee5);
-            Write(new byte[] { 0x57, 0x64, 0x1a, 0x29, 0x59, 0x05 });
-        }
-
-        public void WriteString(string text, byte[]? key)
-        {
-            if (text == null)
+            if (at.T == HSDDataType.X)
             {
-                EmptyPointer();
-            } else if (key == null)
-            {
-                Write(text);
-            } else
-            {
-                byte[] codes = Encoding.UTF8.GetBytes(text);
-                byte[] xored = new byte[(codes.Length + 8) / 8 * 8];
-                for (int i = 0; i < codes.Length; i++)
+                switch (at.Size)
                 {
-                    if (codes[i] != key[i % key.Length])
+                    case 1:
+                        Write((byte)((byte)field.GetValue(data) ^ at.Key));
+                        break;
+                    case 2:
+                        Write((ushort)((ushort)field.GetValue(data) ^ at.Key));
+                        break;
+                    case 4:
+                        Write((uint)((uint)field.GetValue(data) ^ at.Key));
+                        break;
+                    case 8:
+                        Write((ulong)((ulong)field.GetValue(data) ^ at.Key));
+                        break;
+                    default:
+                        throw new Exception($"Size {at.Size} is not valid for X value");
+                }
+            }
+            else if (field.FieldType == typeof(HSDPlaceholder))
+            {
+                HSDPlaceholder holder = new HSDPlaceholder(at.Size);//(HSDPlaceholder)field.GetValue(data);
+                Write(holder.buffer);
+            }
+            else if (field.FieldType == typeof(XString))
+            {
+                XString xs = (XString)field.GetValue(data);
+                if (xs.Buffer != null)
+                {
+                    Write(xs.Buffer);
+                    if (xs.AlignedLength - xs.Buffer.Length > 0) Write(new byte[xs.AlignedLength - xs.Buffer.Length]);
+                }
+                
+            }
+            else
+            {
+                WriteArcData(field.GetValue(data), false);
+            }
+        }
+
+        public void WriteArrayItem(Array items, HSDXAttribute at, int i)
+        {
+            var eleT = items.GetType().GetElementType();
+            if (at.T == HSDDataType.X)
+            {
+                switch (at.Size)
+                {
+                    case 1:
+                        Write((byte)((ulong)items.GetValue(i) ^ at.Key));
+                        break;
+                    case 2:
+                        Write((ushort)((ulong)items.GetValue(i) ^ at.Key));
+                        break;
+                    case 4:
+                        Write((uint)((ulong)items.GetValue(i) ^ at.Key));
+                        break;
+                    case 8:
+                        Write((ulong)((ulong)items.GetValue(i) ^ at.Key));
+                        break;
+                    default:
+                        throw new Exception($"Size {at.Size} is not valid for X value");
+                }
+            }
+            else if (eleT == typeof(HSDPlaceholder))
+            {
+                HSDPlaceholder holder = new HSDPlaceholder(at.Size);//(HSDPlaceholder)items.GetValue(i);
+                Write(holder.buffer);
+            }
+            else if (eleT == typeof(XString))
+            {
+                XString xs = (XString)items.GetValue(i);
+                if (xs.Buffer != null) {
+                    Write(xs.Buffer);
+                    if (xs.AlignedLength - xs.Buffer.Length > 0) Write(new byte[xs.AlignedLength - xs.Buffer.Length]);
+                }
+                
+            }
+            else
+            {
+                var item = items.GetValue(i);
+                WriteArcData(item, false);
+            }
+        }
+
+        public void WriteArcData(object data, bool includePtrs = true)
+        {
+            Type type = data.GetType();
+            FieldInfo[] fields = type.GetFields();
+
+            foreach (var field in fields)
+            {
+                if (!field.IsPublic)
+                    continue;
+                var at = field.GetCustomAttribute<HSDXAttribute>();
+                if (at is not null)
+                {
+                    if (at.IsList)
                     {
-                        xored[i] = (byte)(codes[i] ^ key[i % key.Length]);
+                        if (!field.FieldType.IsArray) throw new Exception($"Use attribute 'List' for no-Array field {field.Name}");
+                        Array items = (Array)field.GetValue(data);
+                        uint size = (uint)items.Length;
+                        if (at.T == HSDDataType.Ptr)
+                        {
+                            for (int i = 0; i < size; i++)
+                            {
+                                if (items.GetValue(i) != null) pointers.Add(BaseStream.Position, new FieldAndData(field, data, i));
+                                Write((long)0);
+                            }
+                        }
+                        else
+                        {
+                            for (int i = 0; i < size; i++)
+                            {
+                                WriteArrayItem(items, at, i);
+                            }
+
+                        }
                     }
                     else
                     {
-                        xored[i] = codes[i];
+                        if (at.T == HSDDataType.Ptr)
+                        {
+                            if (field.GetValue(data) != null) pointers.Add(BaseStream.Position, new FieldAndData(field, data));
+                            Write((long)0);
+                        }
+                        else
+                        {
+                            WriteSingleField(data, field, at);
+                        }
                     }
+                    //====================================================
                 }
-                AddPtr(xored);
             }
-            
-            
+            if (includePtrs) WritePtrList();
         }
 
-        public void EmptyPointer()
+        public void WritePtrList()
         {
-            Write((long)0);
-        }
-
-        public long AddPtr(byte[] buffer)
-        {
-            long pos = BaseStream.Position;
-            pointers.Add(pos, buffer);
-            Write((long)0);
-            return pos;
-        }
-
-        public void AddPtr(IBlock block) {
-            if (block == null)
+            var temp = pointers;
+            pointers = new();
+            foreach (var kvp in temp)
             {
-                EmptyPointer();
-            } else
-            {
-                AddPtr(block.Binarize());
+                long ptr_offset = kvp.Key;
+                ptr_offsets.Add(ptr_offset);
+                var fd = kvp.Value;
+                var field = fd.field;
+                var data = fd.data;
+                var at = field.GetCustomAttribute<HSDXAttribute>();
+                if (field.FieldType.IsArray) {
+                    Array items = (Array)field.GetValue(data);
+                    
+                    //uint size = (uint)(items.Length);
+                    //if (at.Size < 0) { size = (uint)type.GetMethod(at.DynamicSizeCalculator).Invoke(null, new object[] { data }); }
+                    UpdatePointer(ptr_offset);
+                    WriteArrayItem(items, at, fd.index);
+                }
+                else
+                {
+                    UpdatePointer(ptr_offset);
+                    if (field.GetValue(data) != null) WriteSingleField(data, field, at) ;
+
+                }
+
             }
+            if (pointers.Count > 0) WritePtrList();
         }
 
-        public void UpdatePointer(long block_offset, long ptr_offset)
+        public void UpdatePointer(long ptr_offset)
         {
             long curr = BaseStream.Position;
             BaseStream.Seek(ptr_offset, SeekOrigin.Begin);
-            Write(block_offset);
+            Write(curr - HSDArc.HSDArc.HeadSize);
             BaseStream.Seek(curr, SeekOrigin.Begin);
-        }
-
-        public void WritePointerBlocks()
-        {
-            
-            foreach (KeyValuePair<long, byte[]> p in pointers)
-            {
-                if (p.Value == null || p.Value.Length < 1) continue;
-                UpdatePointer(BaseStream.Position - FEHArc.HeadSize, p.Key);
-                Write(p.Value);
-            }
         }
 
         public void WritePointerOffsets()
         {
             pointer_list_offset = BaseStream.Position;
-            foreach (KeyValuePair<long, byte[]> p in pointers)
+            foreach (var p in ptr_offsets)
             {
-                Write(p.Key - FEHArc.HeadSize);
+                Write(p - HSDArc.HSDArc.HeadSize);
             }
         }
 
         public void WriteStart()
         {
-            Write(new byte[FEHArc.HeadSize]);
+            Write(new byte[HSDArc.HSDArc.HeadSize]);
         }
 
         public void WriteEnd(uint unknown1, uint unknown2, ulong magic) {
             int size = (int)BaseStream.Position;
             BaseStream.Seek(0, SeekOrigin.Begin);
             Write(size);
-            Write((uint)(pointer_list_offset - FEHArc.HeadSize));
-            Write(pointers.Count);
+            Write((uint)(pointer_list_offset - HSDArc.HSDArc.HeadSize));
+            Write(ptr_offsets.Count);
             Write((uint)0);
             Write(unknown1);
             Write(unknown2);
             Write(magic);
-        }
-    }
-
-
-    public class SRPGMapWriter : FEHArcWriter
-    {
-        public SRPGMapWriter(Stream output) : base(output)
-        {
-        }
-
-        public void WriteAll(FEHArcSRPGMap _arc, SRPGMap _map)
-        {
-            WriteStart();
-            Write(_map.unknown);
-            Write(_map.highest_score, 0xa9e250b1);
-            long field_ptr_pos = AddPtr(new byte[0]); // field offset
-            long player_ptr_pos = AddPtr(new byte[0]); // player pos offset
-            long units_ptr_pos = AddPtr(new byte[0]); // units offset
-            //AddPtr(_map.field);
-            //AddPtr(_map.player_pos);
-            //AddPtr(_map.units);
-            Write((ushort)_map.player_pos.list.Count(), 0x9d63c79a);
-            Write((ushort)_map.units.list.Count(), 0xac6710ee);
-            Write(_map.turns_to_win, 0xfd);
-            Write(_map.last_enemy_phase, 0xc7);
-            Write(_map.turns_to_defend, 0xec);
-            Write(new byte[5]);
-            UpdatePointer(BaseStream.Position - FEHArc.HeadSize, field_ptr_pos);
-            WriteField(_map.field);
-            UpdatePointer(BaseStream.Position - FEHArc.HeadSize, player_ptr_pos);
-            foreach (Position p in _map.player_pos.list)
-            {
-                Write(p.x, 0xb332);
-                Write(p.y, 0x28b2);
-                Write(new byte[4]);
-            }
-            UpdatePointer(BaseStream.Position - FEHArc.HeadSize, units_ptr_pos);
-            foreach (Unit u in _map.units.list)
-            {
-                WriteUnit(u);
-            }
-            WritePointerBlocks();
-            WritePointerOffsets();
-            WriteEnd(_arc.unknown1, _arc.unknown2, _arc.magic);
-        }
-
-        public void WriteUnit(Unit u)
-        {
-            WriteString(u.id_tag, FEHArc.XKeyId);
-            foreach (string sk in u.skills)
-                WriteString(sk, FEHArc.XKeyId);
-            WriteString(u.accessory, FEHArc.XKeyId);
-            Write(u.pos.x, 0xb332);
-            Write(u.pos.y, 0x28b2);
-            Write(u.rarity, 0x61);
-            Write(u.lv, 0x2a);
-            Write(u.cd, 0x1e);
-            Write(u.unknown);
-            WriteStats(u.stats);
-            Write(u.start_turn, 0xcf);
-            Write(u.movement_group, 0xf4);
-            Write(u.movement_delay, 0x95);
-            Write(u.break_terrain, 0x71);
-            Write(u.tether, 0xb8);
-            Write(u.true_lv, 0x85);
-            Write(u.is_enemy, 0xd0);
-            Write(u.padding);
-            WriteString(u.spawn_check, FEHArc.XKeyId);
-            Write(u.spawn_count, 0x0a);
-            Write(u.spawn_turns, 0x0a);
-            Write(u.spawn_target_remain, 0x2d);
-            Write(u.spawn_target_kills, 0x58);
-            Write(u.paddings);
-        }
-
-        public void WriteField(Field field)
-        {
-            WriteString(field.id, FEHArc.XKeyId);
-            Write(field.width, 0x6b7cd75f);
-            Write(field.height, 0x2baa12d5);
-            Write(field.base_terrain, 0x41);
-            Write(field.padding); // 7 bytes padding
-            foreach (byte[] line in field.terrain)
-            {
-                foreach (byte tile in line)
-                {
-                    Write(tile, 0xA1);
-                }
-            }
         }
     }
 

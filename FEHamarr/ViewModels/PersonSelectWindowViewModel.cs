@@ -1,16 +1,11 @@
 ﻿using Avalonia.Media;
-using DynamicData.Binding;
-using FEHamarr.SerializedData;
+using FEHamarr.HSDArc;
 using ReactiveUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Reactive;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FEHamarr.ViewModels
 {
@@ -34,7 +29,7 @@ namespace FEHamarr.ViewModels
                 return SelectedPerson;
             });
 
-            _personPool = DataManager.Persons.Select(kv => kv.Value).OrderBy(p=>p.version_num).Reverse();
+            _personPool = DataManager.Persons.OrderBy(p=>p.version_num).Reverse();
             foreach (var p in _personPool)
             {
                 FilteredPersons.Add(new PersonViewModel(p));
@@ -90,32 +85,29 @@ namespace FEHamarr.ViewModels
         public PersonViewModel(Person person)
         {
             _person = person;
-            if (!(person is Enemy)) {
-                List<string> list = _person.skills[3].Concat(_person.skills[4]).Reverse().ToList();
-                w = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.Weapon));
-                h = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.Assist));
-                if (h != null) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(h).icon));
-                a = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.A));
-                if (a != null) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(a).icon));
-                b = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.B));
-                if (b != null) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(b).icon));
-                c = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.C));
-                if (c != null) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(c).icon));
-                x = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.X));
-                if (x != null) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(x).icon));
-            } else
-            {
-                w = ((Enemy)person).top_weapon;
-            }
+            var list = _person.skills.ToList();
+            list.Reverse();
+            w = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.Weapon));
+            h = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.Assist));
+            if (!XString.IsEmpty(h)) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(h).icon));
+            a = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.A));
+            if (!XString.IsEmpty(a)) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(a).icon));
+            b = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.B));
+            if (!XString.IsEmpty(b)) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(b).icon));
+            c = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.C));
+            if (!XString.IsEmpty(c)) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(c).icon));
+            x = list.Find(id => id != null && DataManager.CheckSkillCategory(id, SkillCategory.X));
+            if (!XString.IsEmpty(x)) _skillIcons.Add(DataManager.GetSkillIcon((int)DataManager.GetSkill(x).icon));
+                //w = ((XEnemy)person).top_weapon;
 
         }
         public Person Person => _person;
-        public string? w;
-        public string? h;
-        public string? a;
-        public string? b;
-        public string? c;
-        public string? x;
+        public XString? w;
+        public XString? h;
+        public XString? a;
+        public XString? b;
+        public XString? c;
+        public XString? x;
         public string Name => DataManager.GetMessage("M" + _person.id);
         public string Title
         {

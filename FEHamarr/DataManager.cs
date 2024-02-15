@@ -1,15 +1,10 @@
-﻿using Avalonia.Controls;
-using Avalonia.Media;
+﻿using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using Avalonia.X11;
 using FEHamarr.FEHArchive;
-using FEHamarr.SerializedData;
-using System;
+using FEHamarr.HSDArc;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FEHamarr
 {
@@ -24,15 +19,56 @@ namespace FEHamarr
         public static readonly string FIELD_PATH = @"Data\Field\";
         public static readonly string UI_PATH = @"Data\UI\";
 
-        public static Dictionary<string, string> Messages = new Dictionary<string, string>();
-        public static Dictionary<string, Skill> Skills = new Dictionary<string, Skill>();
-        public static Dictionary<string, Person> Persons = new Dictionary<string, Person>();
+        public static List<HSDArcSkills> SkillArcs = new List<HSDArcSkills>();
+        public static List<HSDArcPersons> PersonArcs = new List<HSDArcPersons>();
+        public static List<HSDArcMessages> MsgArcs = new List<HSDArcMessages>();
+
         public static List<uint> Versions;
         public static Bitmap[] ICON_ATLAS;
         public static Bitmap STATUS;
         public static Dictionary<int, IImage> SkillIcons = new Dictionary<int, IImage>();
         public static Dictionary<int, IImage> WeaponTypeIcons = new Dictionary<int, IImage>();
         public static Dictionary<int, IImage> MoveTypeIcons = new Dictionary<int, IImage>();
+
+        static List<Person> persons;
+        static List<Skill> skills;
+
+        static IEnumerable<string> SkillArcNames => SkillArcs.Select(arc => arc.FilePath);
+        static IEnumerable<string> PersonArcNames => PersonArcs.Select(arc => arc.FilePath);
+        static IEnumerable<string> MsgArcNames => MsgArcs.Select(arc => arc.FilePath);
+        public static List<Person> Persons { get
+            {
+                if (persons != null) return persons;
+                List<Person> ps = new();
+                foreach (var arc in PersonArcs)
+                {
+                    foreach (var p in arc.list.items.Values)
+                    {
+                        ps.Add(p);
+                    }
+                }
+                persons = ps;
+                return ps;
+            } 
+        }
+
+        public static List<Skill> Skills
+        {
+            get
+            {
+                if (skills != null) return skills;
+                List<Skill> ss = new();
+                foreach (var arc in SkillArcs)
+                {
+                    foreach (var s in arc.list.items.Values)
+                    {
+                        ss.Add(s);
+                    }
+                }
+                skills = ss;
+                return ss;
+            }
+        }
 
         public static string StripIdPrefix(string id, out string prefix)
         {
@@ -44,33 +80,38 @@ namespace FEHamarr
         {
             foreach (string msg in Directory.GetFiles(MSG_PATH, DATAEXT))
             {
-                FEHArcMsg arc = new FEHArcMsg(msg);
-                var items = arc.GetData();
-                foreach (var item in items) Messages.TryAdd(item.Key, item.Value);
+                using (var rd = new FEHArcReader(msg))
+                {
+                    HSDArcMessages arc = new();
+                    rd.ReadMsgs(arc);
+                    MsgArcs.Add(arc);
+                }
+                
             }
-            foreach (string skl in Directory.GetFiles(SKL_PATH, DATAEXT))
+            foreach (string skill in Directory.GetFiles(SKL_PATH, DATAEXT))
             {
-                FEHArcSkill arc = new FEHArcSkill(skl);
-                var items = arc.GetData();
-                foreach (var item in items) Skills.TryAdd(item.Key, item.Value);
+                using (var rd = new FEHArcReader(skill))
+                {
+                    HSDArcSkills arc = new();
+                    rd.ReadSkills(arc);
+                    SkillArcs.Add(arc);
+                }
             }
             foreach (string person in Directory.GetFiles(PERSON_PATH, DATAEXT))
             {
-                FEHArcPerson arc = new FEHArcPerson(person);
-                var items = arc.GetData();
-                foreach (var item in items) Persons.TryAdd(item.Key, item.Value);
+                using (var rd = new FEHArcReader(person))
+                {
+                    HSDArcPersons arc = new();
+                    rd.ReadPersons(arc);
+                    PersonArcs.Add(arc);
+                }
+                    
             }
-            
-            foreach (string enemy in Directory.GetFiles(ENEMY_PATH, DATAEXT))
-            {
-                FEHArcEnemy arc = new FEHArcEnemy(enemy);
-                var items = arc.GetData();
-                foreach (var item in items) Persons.TryAdd(item.Key, item.Value);
-            }
-            Versions = Persons.Values.Select<Person, uint>(p => p.version_num).Distinct().ToList();
-            Versions.Sort();
-            Versions.Reverse();
-            
+
+            //Versions = Persons.Values.Select<Person, uint>(p => p.version_num).Distinct().ToList();
+            //Versions.Sort();
+            //Versions.Reverse();
+
             InitImage();
         }
 
@@ -86,22 +127,49 @@ namespace FEHamarr
             for (int i = 0; i <= (int)WeaponType.ColorlessBeast; i++) GetWeaponIcon(i);
             for (int i = 0; i <= (int)MoveType.Flying; i++) GetMoveIcon(i);
         }
-        public static Skill GetSkill(string id)
+        public static Skill? GetSkill(string id, string? arcName = null)
         {
-            if (id == null) return null;
-            return Skills.GetValueOrDefault(id);
+            if (string.IsNullOrEmpty(id)) return null;
+            if (!string.IsNullOrEmpty(arcName))
+            {
+                var arc = SkillArcs.Find(arc => arc.FilePath == arcName);
+                if (arc is not null)
+                {
+                    if (arc.list.items.TryGetValue(id, out Skill skill)) return skill;
+                }
+                return null;
+            }
+            foreach (var arc in SkillArcs)
+            {
+                if (arc.list.items.TryGetValue(id, out Skill skill)) return skill;
+            }
+            return null;
         }
 
-        public static Person GetPerson(string id)
+        public static Person? GetPerson(string id, string? arcName = null)
         {
-            return Persons.GetValueOrDefault(id);
+            if (string.IsNullOrEmpty(id)) return null;
+            if (!string.IsNullOrEmpty(arcName))
+            {
+                var arc = PersonArcs.Find(arc => arc.FilePath == arcName);
+                if (arc is not null)
+                {
+                    if (arc.list.items.TryGetValue(id, out Person person)) return person;
+                }
+                return null;
+            }
+            foreach (var arc in PersonArcs)
+            {
+                if (arc.list.items.TryGetValue(id, out Person p)) return p;
+            }
+            return null;
         }
 
         public static string GetMessage(string id)
         {
-            if (Messages.TryGetValue(id, out string ct))
+            foreach (var arc in MsgArcs)
             {
-                return ct;
+                if (arc.items.TryGetValue(id, out string value)) return value;
             }
             return string.Empty;
         }

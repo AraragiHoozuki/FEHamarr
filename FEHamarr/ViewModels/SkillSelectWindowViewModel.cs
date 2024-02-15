@@ -1,4 +1,5 @@
 ﻿using Avalonia.Media;
+using FEHamarr.HSDArc;
 using FEHamarr.SerializedData;
 using ReactiveUI;
 using System;
@@ -32,8 +33,8 @@ namespace FEHamarr.ViewModels
                 return SelectedSkill;
             });
             _skillIndex = unit_and.Index;
-            _skillPool = DataManager.Skills.Select(kv => kv.Value).Where(s=> {
-                return (_skillIndex == 7 && (int)s.category >=3 && (int)s.category <=7)||(_skillIndex !=7 && ((int)s.category==_skillIndex) && (s.id.Contains("SID_魔器")|| s.refine_sort_id < 100));
+            _skillPool = DataManager.Skills.Where(s=> {
+                return (_skillIndex == 7 && (int)s.category >=3 && (int)s.category <=7)||(_skillIndex !=7 && ((int)s.category==_skillIndex) && (((string)s.id).Contains("SID_魔器")|| s.refine_sort_id < 100));
             }).OrderBy(s => s.sort_value).Reverse();
             if (_skillIndex == 0) WeaponFilterEnabled = true;
             if (_skillIndex == 7) SkillTypeFilterEnabled = true;

@@ -3,6 +3,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.ReactiveUI;
 using DynamicData;
 using FEHamarr.FEHArchive;
+using FEHamarr.HSDArc;
 using FEHamarr.SerializedData;
 using FEHamarr.ViewModels;
 using ReactiveUI;

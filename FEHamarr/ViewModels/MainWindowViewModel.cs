@@ -1,25 +1,17 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Controls.Shapes;
 using Avalonia.Media;
-using Avalonia.Styling;
-using DynamicData;
-using DynamicData.Binding;
 using FEHamarr.FEHArchive;
-using FEHamarr.SerializedData;
-using FEHamarr.Views;
+using FEHamarr.HSDArc;
 using ReactiveUI;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Reactive;
 using System.Reactive.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
@@ -68,8 +60,8 @@ namespace FEHamarr.ViewModels
             set => this.RaiseAndSetIfChanged(ref lastSelectedGrid, value);
         }
 
-        FEHArcSRPGMap _arc;
-        SRPGMap _map;
+        HSDArcMap arc;
+        SRPGMap map;
         async Task OpenSRPGMap()
         {
             var mainWindow = Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow : null;
@@ -77,19 +69,24 @@ namespace FEHamarr.ViewModels
             var result = await dialog.ShowAsync(mainWindow);
             if (result != null)
             {
-                _arc = new FEHArcSRPGMap(result[0]);
-                var map = _map = _arc.GetData();
-                grid_collection.Clear();
-                MapGrid[][] grids = new MapGrid[map.field.terrain.Length][];
-                for (int i = 0; i < map.field.terrain.Length; i++)
+                arc = new HSDArcMap();
+                using (var rd = new FEHArcReader(result[0]))
                 {
-                    int view_y = map.field.terrain.Length - i - 1;
-                    grids[view_y] = new MapGrid[map.field.terrain[0].Length];
-                    for (int j = 0; j < map.field.terrain[0].Length; j++)
+                    rd.ReadSRPGMap(arc);
+                }
+                map = arc.mapData;
+                grid_collection.Clear();
+                uint w = map.field.width; uint h = map.field.height;
+                MapGrid[][] grids = new MapGrid[h][];
+                for (int i = 0; i < h; i++)
+                {
+                    int view_y = (int)(h - i - 1);
+                    grids[view_y] = new MapGrid[w];
+                    for (int j = 0; j < w; j++)
                     {
                         grids[view_y][j] = new MapGrid()
                         {
-                            Terrain = (TerrainType)map.field.terrain[i][j],
+                            Terrain = (TerrainType)map.field.terrain[i*w + j].tid,
                             Y = (ushort)i,
                             X = (ushort)j,
                         };
@@ -98,15 +95,15 @@ namespace FEHamarr.ViewModels
                 }
 
 
-                foreach (var unit in map.units.list)
+                foreach (var unit in map.map_units.items)
                 {
-                    grids[map.field.terrain.Length - 1 - unit.pos.y][unit.pos.x].Units.Add(new MapUnit(unit));
+                    grids[h - 1 - unit.pos.y][unit.pos.x].Units.Add(new MapUnit(unit));
                 }
             }
         }
         void SelectGrid(MapGrid grid)
         {
-            if (CurrentGrid != null)
+            if (CurrentGrid is not null)
             {
                 CurrentGrid.IsSelected = false;
             }
@@ -115,12 +112,12 @@ namespace FEHamarr.ViewModels
         }
         void AddUnit()
         {
-            var unit = SerializedData.Unit.Create(CurrentGrid.X, CurrentGrid.Y);
+            var unit = HSDArc.Unit.Create(CurrentGrid.X, CurrentGrid.Y);
             CurrentGrid.AddUnit(unit);
-            _map.units.list.Add(unit);
+            //map.units.list.Add(unit);
         }
 
-        SerializedData.Unit? copiedUnit = null;
+        HSDArc.Unit? copiedUnit = null;
         void CopyUnit(MapUnit unit)
         {
             copiedUnit = unit.Unit.Clone();
@@ -130,7 +127,7 @@ namespace FEHamarr.ViewModels
         {
             if (copiedUnit != null) { 
                 unit.ID = copiedUnit.id_tag;
-                for (int i = 0; i < 7; i++)
+                for (int i = 0; i < 8; i++)
                 {
                     unit.ChangeSkill(i, copiedUnit.skills[i]);
                 }
@@ -145,7 +142,6 @@ namespace FEHamarr.ViewModels
         void DeleteUnit(MapUnit u)
         {
             CurrentGrid.DeleteUnit(u);
-            _map.units.list.Remove(u.Unit);
         }
         async Task OpenPersonSelectWindow(MapUnit unit)
         {
@@ -182,21 +178,32 @@ namespace FEHamarr.ViewModels
         void SaveMap()
         {
             byte[] buffer;
-            for (int i = 0; i < _map.field.terrain.Length; i++)
+            List<Unit> units = new();
+            for (int i = 0; i < map.field.height; i++)
             {
-                for (int j = 0; j < _map.field.terrain[0].Length; j++)
+                for (int j = 0; j < map.field.width; j++)
                 {
-                    _map.field.terrain[i][j] = (byte)grid_collection[_map.field.terrain.Length - i - 1][j].Terrain;
+                    map.field.terrain[i * map.field.width + j].tid = (byte)grid_collection[(int)(map.field.height - i - 1)][j].Terrain;
+                    units.AddRange(grid_collection[(int)(map.field.height - i - 1)][j].Units.Select(mu => mu.Unit));
                 }
             }
+            map.map_units.items = units.ToArray();
+            map.unit_count = (uint)units.Count;
+            map.map_units.DelayedSize = (uint)units.Count;
+            map.player_positions.DelayedSize = (uint)units.Count;
             using (MemoryStream ms = new MemoryStream())
-            using (SRPGMapWriter writer = new SRPGMapWriter(ms))
-            using (FileStream fs = File.OpenWrite(_arc.FilePath))
+            using (FEHArcWriter writer = new FEHArcWriter(ms))
+            using (FileStream fs = File.OpenWrite(arc.FilePath))
             {
-                writer.WriteAll(_arc, _map);
-                buffer = _arc.XStart.Concat(ms.ToArray()).ToArray();
+                writer.WriteStart();
+                writer.WriteArcData(map);
+                writer.WritePointerOffsets();
+                writer.WriteEnd(arc.header.unknown1, arc.header.unknown2, arc.header.magic);
+                //writer.WriteAll(_arc, _map);
+                buffer = arc.XStart.Concat(ms.ToArray()).ToArray();
             }
-            File.WriteAllBytes(_arc.FilePath, Cryptor.EncryptAndCompress(buffer));
+            File.WriteAllBytes(arc.FilePath, Cryptor.EncryptAndCompress(buffer));
+            
         }
     }
 
@@ -213,7 +220,7 @@ namespace FEHamarr.ViewModels
         ushort x;
         ushort y;
 
-        public void AddUnit(SerializedData.Unit unit) 
+        public void AddUnit(HSDArc.Unit unit) 
         { 
             units.Add(new MapUnit(unit)); 
             if (units.Count()==1) NotifyPropertyChanged(nameof(FirstUnit));
@@ -245,8 +252,9 @@ namespace FEHamarr.ViewModels
 
         public IBrush TerrainColor
         {
-            get { 
-               switch(Terrain)
+            get
+            {
+                switch (Terrain)
                 {
                     case TerrainType.Mountain:  case TerrainType.River: case TerrainType.Sea:
                     case TerrainType.Lava:
@@ -310,24 +318,24 @@ namespace FEHamarr.ViewModels
 
     public class MapUnit : ReactiveObject, INotifyPropertyChanged
     {
-        SerializedData.Unit unit;
+        HSDArc.Unit unit;
 
         public event PropertyChangedEventHandler PropertyChanged;
-        void NotifyPropertyChanged([CallerMemberName] String propertyName = "")
+        void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        public MapUnit(SerializedData.Unit u)
+        public MapUnit(HSDArc.Unit u)
         {
             unit = u;
         }
 
-        public SerializedData.Unit Unit => unit;
+        public HSDArc.Unit Unit => unit;
 
         public void ChangeSkill(int index, string id)
         {
-            unit.skills[index] = id;
+            if (id != null) unit.skills[index] = new XString(HSDArc.HSDArc.XKeyId,id);
             NotifyPropertyChanged(nameof(Weapon));
             NotifyPropertyChanged(nameof(Assist));
             NotifyPropertyChanged(nameof(Special));
@@ -350,7 +358,7 @@ namespace FEHamarr.ViewModels
         {
             get => unit.id_tag;
             set {
-                this.RaiseAndSetIfChanged(ref unit.id_tag, value);
+                this.RaiseAndSetIfChanged(ref unit.id_tag, new XString(HSDArc.HSDArc.XKeyId, value));
                 NotifyPropertyChanged();
                 NotifyPropertyChanged(nameof(Name));
                 NotifyPropertyChanged(nameof(Title));
@@ -384,7 +392,7 @@ namespace FEHamarr.ViewModels
             get
             {
                 var p = DataManager.GetPerson(unit.id_tag);
-                return DataManager.GetWeaponIcon((int)p.weapon_type);
+                return DataManager.GetWeaponIcon((int)p!.weapon_type);
             }
         }
         public IImage MoveIcon
@@ -392,7 +400,7 @@ namespace FEHamarr.ViewModels
             get
             {
                 var p = DataManager.GetPerson(unit.id_tag);
-                return DataManager.GetMoveIcon((int)p.move_type);
+                return DataManager.GetMoveIcon((int)p!.move_type);
             }
         }
 
@@ -478,8 +486,8 @@ namespace FEHamarr.ViewModels
             }
             else
             {
-                Skill s = DataManager.GetSkill(unit.skills[index]);
-                return s != null ? DataManager.GetSkillIcon((int)s.icon) : DataManager.GetSkillIcon(0);
+                Skill? s = DataManager.GetSkill(unit.skills[index]);
+                return s is not null ? DataManager.GetSkillIcon((int)s.icon) : DataManager.GetSkillIcon(0);
             }
         }
 
@@ -597,7 +605,7 @@ namespace FEHamarr.ViewModels
         public string SpawnCheck
         {
             get => unit.spawn_check;
-            set { this.RaiseAndSetIfChanged(ref unit.spawn_check, value); }
+            set { this.RaiseAndSetIfChanged(ref unit.spawn_check, new XString(HSDArc.HSDArc.XKeyId, value)); }
         }
         public byte SpawnCount
         {
